@@ -1,0 +1,8 @@
+# Ignore IDE-related files
+.idea
+
+# Ignore files related to API keys
+config.py
+
+# Ignore compiled bytecode files
+*.pyc
