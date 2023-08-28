@@ -1,10 +1,13 @@
 import config
 import telebot
+from Databases import CommonDbOperations
 
 # Initialise Telegram bot
 bot = telebot.TeleBot(config.BOT_TOKEN, parse_mode=None)
 
-def start_telegram_bot():
+news_articles_cluster = None
+
+def startup_telegram_bot():
     bot.polling(non_stop=True)
 
 @bot.message_handler(commands=['start'])
@@ -26,7 +29,12 @@ def callback_inline(call):
 def receive_news_article(message):
     reply_message = "This is the article that you sent: {}".format(message.text)
     bot.send_message(message.chat.id, reply_message)
+    CommonDbOperations.store_news_articles(news_articles_cluster, message.chat.id, message.text)
+
+def startup_database():
+    global news_articles_cluster
+    news_articles_cluster = CommonDbOperations.startup_database()
 
 if __name__ == '__main__':
-    start_telegram_bot()
-
+    startup_database()
+    startup_telegram_bot()
