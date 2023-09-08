@@ -1,5 +1,6 @@
 import stanza
 from stanza.models.common.doc import Document
+from QueryProcessorUtilities import *
 
 def parse_dependencies(pos_tagged_doc):
 
@@ -23,9 +24,8 @@ def combine_consecutive_nouns(doc):
     current_word_index = 1
     for sentence in doc.sentences:
         current_word_list = []
-        sentence_length = len(sentence.words)
         for index, word in enumerate(sentence.words):
-            if (index + 1) < sentence_length and word.upos == 'NOUN' and sentence.words[index + 1].upos == 'NOUN':
+            if check_for_noun_compound(sentence, index):
                 combined_nouns = combine_two_nouns(word, sentence.words[index + 1])
                 sentence.words = correct_head_indexes_in_sentence(index, index + 1, sentence.words)
                 sentence.words[index + 1] = combined_nouns
@@ -38,6 +38,17 @@ def combine_consecutive_nouns(doc):
         new_doc_list.append(current_word_list)
     new_doc = Document(new_doc_list)
     return new_doc
+
+# A noun compound occurs when neighboring words are of upos 'NOUN' and the preceding word has deprel 'compound'
+def check_for_noun_compound(sentence, current_word_index):
+    if (current_word_index + 1) < len(sentence.words):
+        current_word = sentence.words[current_word_index]
+        next_word = sentence.words[current_word_index + 1]
+        return check_for_upos_type(current_word, UPOS_NOUN) and \
+            check_for_upos_type(next_word, UPOS_NOUN) and \
+            check_for_dependency_relation(current_word, DEPREL_COMPOUND)
+    else:
+        return False
 
 def combine_two_nouns(word1, word2):
     combined = word2
