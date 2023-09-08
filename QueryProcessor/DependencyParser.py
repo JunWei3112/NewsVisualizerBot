@@ -21,12 +21,12 @@ def print_document(doc):
 # TODO: May need to combine consecutive nouns and adjectives too
 def combine_consecutive_nouns(doc):
     new_doc_list = []
-    current_word_index = 1
     for sentence in doc.sentences:
+        current_word_index = 1
         current_word_list = []
         for index, word in enumerate(sentence.words):
             if check_for_noun_compound(sentence, index):
-                combined_nouns = combine_two_nouns(word, sentence.words[index + 1])
+                combined_nouns = combine_two_words(word, sentence.words[index + 1])
                 sentence.words = correct_head_indexes_in_sentence(index, index + 1, sentence.words)
                 sentence.words[index + 1] = combined_nouns
             else:
@@ -49,11 +49,6 @@ def check_for_noun_compound(sentence, current_word_index):
             check_for_dependency_relation(current_word, DEPREL_COMPOUND)
     else:
         return False
-
-def combine_two_nouns(word1, word2):
-    combined = word2
-    combined.text = word1.text + ' ' + word2.text
-    return combined
 
 def correct_head_indexes_in_sentence(old_id, new_id, words):
     for word in words:

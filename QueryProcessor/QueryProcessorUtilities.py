@@ -110,3 +110,8 @@ def check_for_upos_type(word, upos):
 
 def check_for_dependency_relation(word, deprel):
     return word.deprel == deprel
+
+def combine_two_words(word1, word2):
+    combined = word2
+    combined.text = word1.text + ' ' + word2.text
+    return combined
