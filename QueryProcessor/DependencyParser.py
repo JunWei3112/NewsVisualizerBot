@@ -11,7 +11,7 @@ def parse_dependencies(pos_tagged_doc):
     doc = nlp(pos_tagged_doc)
     print_document(doc)
     print('----------------')
-    doc = combine_consecutive_nouns(doc)
+    doc = combine_compound_words(doc)
     print_document(doc)
     return doc
 
@@ -21,15 +21,23 @@ def print_document(doc):
             print(f'id: {word.id}\tword: {word.text}\thead: {sentence.words[word.head - 1].text if word.head > 0 else "root"}\tupos: {word.upos}\tdeprel: {word.deprel}')
 
 # TODO: May need to combine consecutive nouns and adjectives too
-def combine_consecutive_nouns(doc):
+def combine_compound_words(doc):
     new_doc_list = []
     for sentence in doc.sentences:
         current_word_index = 1
         current_word_list = []
         for index, word in enumerate(sentence.words):
             if check_for_noun_compound(sentence, index) or check_for_verb_compound(sentence, index):
+                first_word_one_based_index = index + 1
+                second_word_one_based_index = index + 2
                 compound_word = combine_two_words(word, sentence.words[index + 1])
-                sentence.words = correct_head_indexes_in_sentence(index, index + 1, sentence.words)
+                # Need to specify different behavior depending on whether the preceding or following word is the parent
+                if word.head == second_word_one_based_index:
+                    sentence.words = correct_head_indexes_in_sentence(
+                        first_word_one_based_index, second_word_one_based_index, sentence.words)
+                else:
+                    sentence.words = correct_head_indexes_in_sentence(
+                        second_word_one_based_index, first_word_one_based_index, sentence.words)
                 sentence.words[index + 1] = compound_word
             else:
                 sentence.words = correct_head_indexes_in_sentence(word.id, current_word_index, sentence.words)
@@ -64,13 +72,13 @@ def check_for_verb_compound(sentence, current_word_index):
 
 def correct_head_indexes_in_sentence(old_id, new_id, words):
     for word in words:
-        if word.head == old_id + 1:
-            word.head = new_id + 1
+        if word.head == old_id:
+            word.head = new_id
     return words
 
 def correct_head_indexes_in_list(old_id, new_id, word_list):
     for index, word in enumerate(word_list):
-        if word["head"] == old_id + 1:
-            word["head"] = new_id + 1
+        if word["head"] == old_id:
+            word["head"] = new_id
         word_list[index] = word
     return word_list
