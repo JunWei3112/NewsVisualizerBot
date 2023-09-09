@@ -1,6 +1,7 @@
 import config
 import telebot
 from Databases import CommonDbOperations
+from QueryProcessor import QueryProcessorInterface
 
 # Initialise Telegram bot
 bot = telebot.TeleBot(config.BOT_TOKEN, parse_mode=None)
@@ -28,13 +29,26 @@ def callback_inline(call):
             sent = bot.send_message(call.message.chat.id, reply_message)
             bot.register_next_step_handler(sent, receive_news_article)
         elif call.data == 'modify_infographic':
-            reply_message = 'Please send me the infographic that you wish to make changes to.'
+            reply_message = 'Please send me the infographic that you wish to modify.'
             sent = bot.send_message(call.message.chat.id, reply_message)
+            bot.register_next_step_handler(sent, receive_infographic)
 
 def receive_news_article(message):
     reply_message = "This is the article that you sent: {}".format(message.text)
     bot.send_message(message.chat.id, reply_message)
     CommonDbOperations.store_news_articles(news_articles_cluster, message.chat.id, message.text)
+
+def receive_infographic(message):
+    reply_message = "What change(s) do you wish to make to this infographic?"
+    sent = bot.send_message(message.chat.id, reply_message)
+    bot.register_next_step_handler(sent, receive_infographic_changes)
+
+def receive_infographic_changes(message):
+    proposed_user_changes = message.text
+    processing_message = 'Generating instructions... ' + '\U000023F3'
+    bot.send_message(message.chat.id, processing_message)
+    generated_instructions = QueryProcessorInterface.process_query(proposed_user_changes)
+    bot.send_message(message.chat.id, generated_instructions)
 
 def startup_database():
     global news_articles_cluster

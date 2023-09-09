@@ -1,6 +1,6 @@
 import stanza
 from stanza.models.common.doc import Document
-from QueryProcessorUtilities import *
+from QueryProcessor.QueryProcessorUtilities import *
 
 def parse_dependencies(pos_tagged_doc):
 
