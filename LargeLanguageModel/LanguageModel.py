@@ -48,14 +48,14 @@ if __name__ == '__main__':
         device_map="auto",
         stopping_criteria=stopping_criteria,
         max_new_tokens=256,
-        token=config.HUGGING_FACE_ACCESS_TOKEN
+        token=config.HUGGING_FACE_ACCESS_TOKEN,
+        temperature=0.1
     )
 
     response_schemas = [
         ResponseSchema(name="instruction_type", description="[ADD] if it is an Add instruction, "
                        + "[EDIT] if it is an Edit instruction or [DELETE] if it is a Delete instruction"),
-        ResponseSchema(name="target_element", description="element that is to be added, edited or deleted"),
-        ResponseSchema(name="explanation", description="explanation behind the categorized instruction type to the user's instruction")
+        ResponseSchema(name="target_element", description="element that is to be added, edited or deleted")
     ]
     output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
 
@@ -76,6 +76,7 @@ if __name__ == '__main__':
 
     llm = HuggingFacePipeline(pipeline=generate_text)
     llm_chain = LLMChain(llm=llm, prompt=prompt)
+    llm_chain.verbose=True
     output = llm_chain.predict(
         instruction='Take out the pie chart',
         context=context
