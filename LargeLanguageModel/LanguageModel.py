@@ -59,15 +59,11 @@ if __name__ == '__main__':
     output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
 
     format_instructions = output_parser.get_format_instructions()
-    prompt_template = """User will provide an instruction about modifying an infographic. Your job as an assistant 
-    is to identify whether this instruction is an Add, Edit or Delete instruction. 
-    Definitions of Add, Edit and Delete instructions are provided in the context. 
-        
+    prompt_template = """Definitions of Add, Edit and Delete instructions are provided in the context. 
+    Identify whether the following instruction is an Add, Edit or Delete instruction: {instruction}
+    
     Context: {context}
-    Format Instructions: {format_instructions}
-        
-    User: {instruction}
-    Assistant:"""
+    Format Instructions: {format_instructions}"""
     context = """An Add instruction is one that adds a new element to an infographic.
     An Edit instruction is one that modifies an attribute of an element that already exists in an infographic.
     A Delete instruction is one that removes an existing element from an infographic."""
