@@ -54,6 +54,7 @@ if __name__ == '__main__':
     response_schemas = [
         ResponseSchema(name="instruction_type", description="[ADD] if it is an Add instruction, "
                        + "[EDIT] if it is an Edit instruction or [DELETE] if it is a Delete instruction"),
+        ResponseSchema(name="target_element", description="element that is to be added, edited or deleted"),
         ResponseSchema(name="explanation", description="explanation behind the categorized instruction type to the user's instruction")
     ]
     output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
