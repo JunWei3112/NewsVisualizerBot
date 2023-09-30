@@ -11,3 +11,4 @@ config.py
 # Ignore bash scripts and other misc files in LargeLanguageModel
 LargeLanguageModel/*.sh
 LargeLanguageModel/*.txt
+LargeLanguageModel/LanguageModelLangchain.py
