@@ -9,6 +9,10 @@ config.py
 *.pyc
 
 # Ignore bash scripts and other misc files in LargeLanguageModel
-LargeLanguageModel/*.sh
+LargeLanguageModel/*/*.sh
 LargeLanguageModel/*.txt
 LargeLanguageModel/LanguageModelLangchain.py
+
+# Ignore generated JSON and CSV files in WebScrper
+LargeLanguageModel/WebScraper/*.json
+LargeLanguageModel/WebScraper/*.csv

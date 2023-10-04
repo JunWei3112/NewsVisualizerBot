@@ -22,7 +22,7 @@ if __name__ == '__main__':
         temperature=0.1
     )
 
-    instruction = "Delete the header"
+    instruction = "Remove the graph on the right"
 
     prompt_template = f"""
 <s>[INST] <<SYS>>
@@ -40,21 +40,26 @@ If the instruction modifies an attribute of an existing element in the infograph
     InstructionType: EDIT
     TargetElement: string // element that is to be modified
     ElementValue: string // value of the element that is to be modified, if specified in the instruction. If not specified, set the value as NONE
-    EditAttribute: string // [SIZE] if the size of the element is modified, [CONTENT] if the content of the element is modified
+    ElementLocation: string // original location of the element in the infographic, if specified in the instruction. If not specified, set the value as NONE
+    EditAttribute: string // [SIZE] if the size of the element is modified, [CONTENT] if the textual content of the element is modified, [COLOR] if the color of the element is modified
+    TargetValue: string // new size or textual content or color of the element, if specified in the instruction. If not specified, set the value to NONE
 )
 If the instruction modifies the location of an existing element in an infographic, the expected output should be formatted in the following schema:
 (
     InstructionType: MOVE
     TargetElement: string // element that is to be moved
     ElementValue: string // value of the element that is to be moved, if specified in the instruction. If not specified, set the value as NONE
-    TargetLocation: string // new location of the element, if specified in the instruction
+    ElementLocation: string // original location of the element in the infographic, if specified in the instruction. If not specified, set the value as NONE
+    TargetLocation: string // new location of the element, if specified in the instruction. If not specified, set the value as NONE
 )
 If the instruction removes an existing element from an infographic, the expected output should be formatted in the following schema:
 (
     InstructionType: DELETE
     TargetElement: string // element that is to be deleted
     ElementValue: string // value of the element that is to be deleted, if specified in the instruction. If not specified, set the value as NONE
+    ElementLocation: string // original location of the element in the infographic, if specified in the instruction. If not specified, set the value as NONE
 )
+The value of InstructionType in the output must only be either ADD, EDIT, MOVE or DELETE
 <</SYS>>
 
 The instruction is as follows: Add new comment: "This is a new comment" [/INST]
@@ -70,6 +75,7 @@ The instruction is as follows: Remove the second article in 'Similar Articles' [
     InstructionType: DELETE
     TargetElement: article
     ElementValue: NONE
+    ElementLocation: NONE
 )</s><s> [INST]
 
 The instruction is as follows: I want the knowledge graph to be on the right of the news links' [/INST]
@@ -77,6 +83,7 @@ The instruction is as follows: I want the knowledge graph to be on the right of 
     InstructionType: MOVE
     TargetElement: knowledge graph
     ElementValue: NONE
+    ElementLocation: NONE
     TargetLocation: right of the news links
 )</s><s> [INST]
 
@@ -85,7 +92,9 @@ The instruction is as follows: Make the knowledge graph larger [/INST]
     InstructionType: EDIT
     TargetElement: knowledge graph
     ElementValue: NONE
+    ElementLocation: NONE
     EditAttribute: SIZE
+    TargetValue: larger
 )</s><s> [INST]
 
 The instruction is as follows: {instruction} [/INST]"""
