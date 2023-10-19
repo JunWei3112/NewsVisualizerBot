@@ -9,15 +9,15 @@ def generate_instructions(parsed_doc):
     for pair in verb_and_noun_pairs:
         verb = pair[0]
         noun = pair[1]
-        if verb.text.lower() in ADD_SYNONYMS:
-            add_targets.append(noun)
-        elif verb.text.lower() in DELETE_SYNONYMS:
-            delete_targets.append(noun)
-        elif verb.text.lower() in EDIT_SYNONYMS:
-            if noun.deprel == DEPREL_DIRECT_OBJECT:
+        if noun.deprel == DEPREL_DIRECT_OBJECT:
+            if verb.text.lower() in ADD_SYNONYMS:
+                add_targets.append(noun)
+            elif verb.text.lower() in DELETE_SYNONYMS:
+                delete_targets.append(noun)
+            elif verb.text.lower() in EDIT_SYNONYMS:
                 edit_targets.append(noun)
-        else:
-            instructions += 'UNRECOGNISED COMMAND!'
+            else:
+                instructions += 'UNRECOGNISED COMMAND!'
 
         current_set_of_instructions = '----------------------\n'
         current_set_of_instructions += f'VERB:  id: {pair[0].id}\tword: {pair[0].text}\tupos: {pair[0].upos}\tdeprel: {pair[0].deprel}\n'

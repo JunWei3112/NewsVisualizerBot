@@ -8,5 +8,5 @@ def process_query(query):
     return InstructionGenerator.generate_instructions(parsed_doc)
 
 if __name__ == "__main__":
-    query = 'Make the graph on the right larger'
+    query = 'Place another graph besides the header'
     process_query(query)
