@@ -2,9 +2,41 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import transformers
 import torch
 from linetimer import CodeTimer
+import json
+
+def read_json_file(json_file_name):
+    file_obj = open(json_file_name, "r")
+    json_content = file_obj.read()
+    return json.loads(json_content)
+
+def run_diagnostics(llm_generate_text):
+    annotations_json = read_json_file("annotations.json")
+    number_of_annotations = 0
+    correct_annotations = 0
+
+    with CodeTimer('Identify Instruction Type', unit='s'):
+        for annotation in annotations_json:
+            instruction = annotation["instruction"]["prompt"]
+            expected_instruction_type = annotation["annotation"]["instruction_type"]
+            number_of_annotations += 1
+
+            prompt_instruction_type = f'For the following instruction to modify an infographic ({instruction}), what is the instruction type (ADD/DELETE/EDIT/MOVE)?'
+            instruction_type_obj = llm_generate_text(prompt_instruction_type)
+            instruction_type = instruction_type_obj[0]['generated_text']
+            print(f'Instruction: {instruction}')
+            print(f'Instruction Type: {instruction_type}')
+            print(f'Expected Instruction Type: {expected_instruction_type}')
+            print('------------------------------')
+
+            if instruction_type == expected_instruction_type:
+                correct_annotations += 1
+
+    print('-----------STATS--------------')
+    print(f'Number of correct annotations: {correct_annotations}/{number_of_annotations}')
+    print('------------------------------')
 
 if __name__ == '__main__':
-    model_path = "google/flan-t5-large"
+    model_path = 'google/flan-t5-large-instruction-type-tuned'
     device = f'cuda:{torch.cuda.current_device()}' if torch.cuda.is_available() else 'cpu'
     print(f"Using device: {device}")
 
@@ -13,7 +45,7 @@ if __name__ == '__main__':
         print(f'Model being used: {model_path}')
 
     with CodeTimer('Tokenizer Loading', unit='s'):
-        tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
+        tokenizer = AutoTokenizer.from_pretrained(model_path)
         tokenizer.model_max_length = 2048
 
     with CodeTimer('Pipeline Loading', unit='s'):
@@ -26,72 +58,83 @@ if __name__ == '__main__':
             max_new_tokens=256,
         )
 
-    instruction = "Delete the statement 'The news article is based on a scientific study' from the list of statements on related facts."
+    instruction = "add a comment: 'This is a good article'"
+    print('-------------------------------------')
+    print(f'Instruction: {instruction}')
+    print('-------------------------------------')
 
-    prompt_template = f"""
-The infographic has the following sections: 1) Number of Shares, 2) Vote on Reliability, 3) Related Facts, 4) Latest Comments,
-5) Knowledge Graph Summaries, 6) Similar Articles, 7) Header
-From the following instruction ({instruction}), extract the necessary information required to fill up the expected output
+    with CodeTimer('Generating Structured Output', unit='s'):
+        # Identify Instruction Type
+        prompt_instruction_type = f'For the following instruction to modify an infographic ({instruction}), what is the instruction type (ADD/DELETE/EDIT/MOVE)?'
 
-If the instruction adds a new element to an infographic, the expected output should be formatted in the following schema:
-(
-    InstructionType: ADD
-    TargetElement: // element that is to be added
-    InfographicSection: // try to infer the infographic section that the element will be added to. If unable to infer the section, set the value as NONE
-    TargetLocation: // location of the new element in the infographic section, if specified in the instruction. If not specified, set the value as NONE
-)
-If the instruction modifies an attribute of an existing element in the infographic, the expected output should be formatted in the following schema:
-(
-    InstructionType: EDIT
-    TargetElement: // element that is to be modified
-    InfographicSection: // try to infer the infographic section where the modified element is in. If unable to infer the section, set the value as NONE
-    ElementLocation: // location of the modified element in the infographic section, if specified in the instruction. If not specified, set the value as NONE
-    EditAttribute: // [SIZE] if the size of the element is modified, [CONTENT] if the textual content of the element is modified
-    TargetValue: // new size or textual content of the element, if specified in the instruction. If not specified, set the value as NONE
-)
-If the instruction modifies the location of an existing element in an infographic, the expected output should be formatted in the following schema:
-(
-    InstructionType: MOVE
-    TargetElement: // element that is to be moved
-    InfographicSection: // try to infer the infographic section where the target element is originally in. If unable to infer the section, set the value as NONE
-    ElementLocation: // original location of the element in the infographic section, if specified in the instruction. If not specified, set the value as NONE
-    TargetLocation: // new location of the element, if specified in the instruction. If not specified, set the value as NONE
-)
-If the instruction removes an existing element from an infographic, the expected output should be formatted in the following schema:
-(
-    InstructionType: DELETE
-    TargetElement: // element that is to be deleted
-    InfographicSection: // try to infer the infographic section where the deleted element is in. If unable to infer the section, set the value as NONE
-    ElementLocation: // location of the deleted element in the infographic section, if specified in the instruction. If not specified, set the value as NONE
-)
-    """
-
-    with CodeTimer('Identify Instruction Type', unit='s'):
-        prompt_instruction_type = f'''
-        For the following instruction to modify an infographic ({instruction}), what is the instruction type?
-        If the instruction adds a new element to an infographic, the instruction type is ADD.
-        If the instruction modifies an attribute of an existing element in the infographic, the instruction type is EDIT.
-        If the instruction modifies the location of an existing element in an infographic, the instruction type is MOVE.
-        If the instruction removes an existing element from an infographic, the instruction type is DELETE.
-        '''
         instruction_type_obj = generate_text(prompt_instruction_type)
-        print(f'Instruction Type: {instruction_type_obj[0]}')
+        instruction_type = instruction_type_obj[0]['generated_text']
+        print(f'Instruction Type: {instruction_type}')
 
-    with CodeTimer('Identify Target Element', unit='s'):
-        prompt_target_element = f'''
-        For the following instruction to modify an infographic ({instruction}), what is the target element to be added, modified, moved or deleted?
-        '''
+        # Identify Target Element
+        prompt_target_element = f'For the following instruction to modify an infographic ({instruction}), what is the element that is to be '
+        if instruction_type == 'ADD':
+            prompt_target_element += 'added?'
+        elif instruction_type == 'DELETE':
+            prompt_target_element += 'deleted?'
+        elif instruction_type == 'EDIT':
+            prompt_target_element += 'modified?'
+        else:
+            prompt_target_element += 'moved?'
+
         target_element_obj = generate_text(prompt_target_element)
-        print(f'Target Element: {target_element_obj[0]}')
+        target_element = target_element_obj[0]['generated_text']
+        print(f'Target Element: {target_element}')
 
-    with CodeTimer('Identify Infographic Section', unit='s'):
-        prompt_infographic_section = f'''
-        The infographic has the following sections: 1) Number of Shares, 2) Vote on Reliability, 3) Related Facts, 4) Latest Comments, 5) Knowledge Graph Summaries, 6) Similar Articles, 7) Header
-        For the following instruction to modify an infographic ({instruction}), what is the infographic section where the target element to be added, modified, moved or deleted in? If unable to infer the section, set the value as NONE
-        '''
+        # Identify Infographic Section
+        if instruction_type == 'ADD':
+            prompt_infographic_section = f'For the following instruction to modify an infographic ({instruction}), what is the infographic section (1) Number of Shares, 2) Vote on Reliability, 3) Related Facts, 4) Latest Comments, 5) Knowledge Graph Summaries, 6) Similar Articles, 7) Header) where the target element will be added to? '
+        elif instruction_type == 'DELETE':
+            prompt_infographic_section = f'For the following instruction to modify an infographic ({instruction}), what is the infographic section (1) Number of Shares, 2) Vote on Reliability, 3) Related Facts, 4) Latest Comments, 5) Knowledge Graph Summaries, 6) Similar Articles, 7) Header) where the target element will be deleted from? '
+        elif instruction_type == 'EDIT':
+            prompt_infographic_section = f'For the following instruction to modify an infographic ({instruction}), what is the infographic section (1) Number of Shares, 2) Vote on Reliability, 3) Related Facts, 4) Latest Comments, 5) Knowledge Graph Summaries, 6) Similar Articles, 7) Header) where the modified element is in? '
+        else:
+            prompt_infographic_section = f'For the following instruction to modify an infographic ({instruction}), what is the infographic section (1) Number of Shares, 2) Vote on Reliability, 3) Related Facts, 4) Latest Comments, 5) Knowledge Graph Summaries, 6) Similar Articles, 7) Header) where the target element is originally in?  '
+        prompt_infographic_section += 'If unable to infer the infographic section, set the answer as NONE.'
+
         infographic_section_obj = generate_text(prompt_infographic_section)
-        print(f'Infographic Section: {infographic_section_obj[0]}')
+        infographic_section = infographic_section_obj[0]['generated_text']
+        print(f'Infographic Section: {infographic_section}')
 
-    # with CodeTimer('Response Generation', unit='s'):
-    #     generated_response = generate_text(prompt_template)
-    # print(f'Response: {generated_response[0]}')
+        # # Identify Element Location
+        # if instruction_type != 'MOVE':
+        #     prompt_element_location = f'For the following instruction to modify an infographic, ({instruction}), '
+        #     if instruction_type == 'ADD':
+        #         prompt_element_location += 'what is the target location of the new element in the infographic section? '
+        #     elif instruction_type == 'DELETE':
+        #         prompt_element_location += 'what is the location of the deleted element in the infographic section? '
+        #     elif instruction_type == 'EDIT':
+        #         prompt_element_location += 'what is the location of the modified element in the infographic section? '
+        #     prompt_element_location += 'If unable to infer the location, set the answer as NONE. '
+        #
+        #     element_location_obj = generate_text(prompt_element_location)
+        #     element_location = element_location_obj[0]['generated_text']
+        #     print(f'Location of Target Element in Infographic Section: {element_location}')
+
+        # Identify Edit Attribute and Target Value
+        if instruction_type == 'EDIT':
+            prompt_edit_attribute = f'For the following instruction to modify an infographic, ({instruction}), if the size of the target element is modified, set the answer as SIZE. Else, if the textual content of the target element is modified, set the answer as CONTENT.'
+
+            edit_attribute_obj = generate_text(prompt_edit_attribute)
+            edit_attribute = edit_attribute_obj[0]['generated_text']
+            print(f'Edit Attribute: {edit_attribute}')
+
+            prompt_target_value = f'For the following instruction to modify an infographic, ({instruction}), what is the new size or textual content of the target element?'
+
+            target_value_obj = generate_text(prompt_target_value)
+            target_value = target_value_obj[0]['generated_text']
+            print(f'Target Value: {target_value}')
+
+        # Identify New Location
+        if instruction_type == 'MOVE':
+            prompt_new_location = f'For the following instruction to modify an infographic, ({instruction}), what is the new location of the target element?'
+
+            new_location_obj = generate_text(prompt_new_location)
+            new_location = new_location_obj[0]['generated_text']
+            print(f'New Location: {new_location}')
+
