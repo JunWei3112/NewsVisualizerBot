@@ -111,8 +111,34 @@ The instruction is as follows: Make the knowledge graph larger [/INST]
 
 The instruction is as follows: {instruction} [/INST]"""
 
-    with CodeTimer('Response Generation'):
-        generated_sequences = generate_text(prompt_template)
+    with CodeTimer('Identify Instruction Type', unit='s'):
+        prompt_instruction_type = f'''
+        For the following instruction to modify an infographic ({instruction}), what is the instruction type?
+        If the instruction adds a new element to an infographic, the instruction type is ADD.
+        If the instruction modifies an attribute of an existing element in the infographic, the instruction type is EDIT.
+        If the instruction modifies the location of an existing element in an infographic, the instruction type is MOVE.
+        If the instruction removes an existing element from an infographic, the instruction type is DELETE.
+        '''
+        instruction_type_obj = generate_text(prompt_instruction_type)
+        print(f'Instruction Type: {instruction_type_obj[0]["generated_text"]}')
 
-    for sequence in generated_sequences:
-        print(f"Result: {sequence['generated_text']}")
+    with CodeTimer('Identify Target Element', unit='s'):
+        prompt_target_element = f'''
+        For the following instruction to modify an infographic ({instruction}), what is the target element to be added, modified, moved or deleted?
+        '''
+        target_element_obj = generate_text(prompt_target_element)
+        print(f'Target Element: {target_element_obj[0]["generated_text"]}')
+
+    with CodeTimer('Identify Infographic Section', unit='s'):
+        prompt_infographic_section = f'''
+        The infographic has the following sections: 1) Number of Shares, 2) Vote on Reliability, 3) Related Facts, 4) Latest Comments, 5) Knowledge Graph Summaries, 6) Similar Articles, 7) Header
+        For the following instruction to modify an infographic ({instruction}), what is the infographic section where the target element to be added, modified, moved or deleted in? If unable to infer the section, set the value as NONE
+        '''
+        infographic_section_obj = generate_text(prompt_infographic_section)
+        print(f'Infographic Section: {infographic_section_obj[0]["generated_text"]}')
+
+    # with CodeTimer('Response Generation'):
+    #     generated_sequences = generate_text(prompt_template)
+
+    # for sequence in generated_sequences:
+    #     print(f"Result: {sequence['generated_text']}")

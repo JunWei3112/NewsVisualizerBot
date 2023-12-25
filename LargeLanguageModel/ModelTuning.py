@@ -53,7 +53,7 @@ if __name__ == '__main__':
         task_type="CAUSAL_LM",
     )
 
-    tokenizer = AutoTokenizer.from_pretrained(model_path, token=config.HUGGING_FACE_ACCESS_TOKEN)
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 
     output_dir = "./results"

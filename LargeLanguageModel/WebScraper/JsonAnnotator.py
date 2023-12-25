@@ -1,19 +1,11 @@
 import json
 
-def convert_json_to_instructions(instructions_file_name):
-    file_obj = open(instructions_file_name, "r")
+
+def get_json_obj_from_file(file_name):
+    file_obj = open(file_name, "r")
     json_content = file_obj.read()
     return json.loads(json_content)
 
-def convert_json_to_annotated_ids(ids_json_file_name):
-    file_obj = open(ids_json_file_name, "r")
-    json_content = file_obj.read()
-    return json.loads(json_content)
-
-def convert_json_to_annotations(annotations_json_file_name):
-    file_obj = open(annotations_json_file_name, "r")
-    json_content = file_obj.read()
-    return json.loads(json_content)
 
 def actions_on_exit(annotated_ids_json, annotations_json, ids_json_file_name, annotations_json_file_name):
     json_string_ids = json.dumps(annotated_ids_json)
@@ -25,6 +17,7 @@ def actions_on_exit(annotated_ids_json, annotations_json, ids_json_file_name, an
     json_file_ids.close()
     json_file_annotations.close()
 
+
 def count_number_of_annotated_posts(annotated_ids_json):
     count = 0
     for annotated_id_json in annotated_ids_json:
@@ -32,17 +25,18 @@ def count_number_of_annotated_posts(annotated_ids_json):
             count += 1
     return count
 
+
 def annotate_instructions(ids_json_file, annotations_json_file, posts_file):
     # The values for 'action' can be 'Accepted' and 'Rejected'
     annotated_ids = list()
-    annotated_ids_json = convert_json_to_annotated_ids(ids_json_file)
+    annotated_ids_json = get_json_obj_from_file(ids_json_file)
     for annotated_id_json in annotated_ids_json:
         annotated_ids.append(annotated_id_json['id'])
 
-    annotations_json = convert_json_to_annotations(annotations_json_file)
+    annotations_json = get_json_obj_from_file(annotations_json_file)
     is_exit = False
 
-    instructions_json_obj = convert_json_to_instructions(posts_file)
+    instructions_json_obj = get_json_obj_from_file(posts_file)
     for instruction_json in instructions_json_obj:
         if is_exit:
             break
@@ -209,17 +203,24 @@ def annotate_instructions(ids_json_file, annotations_json_file, posts_file):
 
     actions_on_exit(annotated_ids_json, annotations_json, ids_json_file, annotations_json_file)
 
+
 def generate_unique_ids(instructions_file_name):
-    instructions = convert_json_to_instructions(instructions_file_name)
-    instruction_count = 1
+    instructions = get_json_obj_from_file(instructions_file_name)
+
+    max_instruction_count = 0
+    for instruction in instructions:
+        if 'id' in instruction:
+            max_instruction_count = max(max_instruction_count, instruction["id"])
+
     for instruction in instructions:
         if 'id' not in instruction:
-            instruction["id"] = instruction_count
-        instruction_count += 1
+            instruction["id"] = max_instruction_count + 1
+            max_instruction_count += 1
 
     json_string = json.dumps(instructions)
     json_file_ids = open(instructions_file_name, "w")
     json_file_ids.write(json_string)
+
 
 if __name__ == '__main__':
     llm_instructions_file = 'bard_data_files/llm_generated_instructions.json'

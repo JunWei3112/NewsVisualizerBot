@@ -13,6 +13,8 @@ LargeLanguageModel/*/*.sh
 LargeLanguageModel/*.txt
 LargeLanguageModel/LanguageModelLangchain.py
 
-# Ignore generated JSON and CSV files in WebScrper
+# Ignore generated JSON and CSV-related files in WebScraper
 LargeLanguageModel/WebScraper/*/*.json
 LargeLanguageModel/WebScraper/*/*.csv
+LargeLanguageModel/WebScraper/*/*.xlsx
+LargeLanguageModel/WebScraper/*/*.xlsm
