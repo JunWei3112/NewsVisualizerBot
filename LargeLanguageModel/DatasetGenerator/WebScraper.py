@@ -5,27 +5,27 @@ import config
 
 def convert_to_csv(posts):
     df = pd.DataFrame(posts)
-    df.to_csv('WebScraper/posts.csv', sep=',', index=False)
+    df.to_csv('DatasetGenerator/posts.csv', sep=',', index=False)
 
 def convert_posts_to_json(posts):
     json_string = json.dumps(posts)
-    json_file = open("WebScraper/posts.json", "w")
+    json_file = open("DatasetGenerator/posts.json", "w")
     json_file.write(json_string)
     json_file.close()
 
 def convert_json_to_posts():
-    file_obj = open("WebScraper/posts.json", "r")
+    file_obj = open("DatasetGenerator/posts.json", "r")
     json_content = file_obj.read()
     return json.loads(json_content)
 
 def convert_ids_to_json(ids):
     json_string = json.dumps(ids)
-    json_file = open("WebScraper/posts_ids.json", "w")
+    json_file = open("DatasetGenerator/posts_ids.json", "w")
     json_file.write(json_string)
     json_file.close()
 
 def convert_json_to_ids():
-    file_obj = open("WebScraper/posts_ids.json", "r")
+    file_obj = open("DatasetGenerator/posts_ids.json", "r")
     json_content = file_obj.read()
     return json.loads(json_content)
 
