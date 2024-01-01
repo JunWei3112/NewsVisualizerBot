@@ -2,6 +2,7 @@ import config
 import telebot
 from Databases import CommonDbOperations
 from QueryProcessor import QueryProcessorInterface
+import ResponseHandler
 
 # Initialise Telegram bot
 bot = telebot.TeleBot(config.BOT_TOKEN, parse_mode=None)
@@ -47,8 +48,10 @@ def receive_infographic_changes(message):
     proposed_user_changes = message.text
     processing_message = 'Generating instructions... ' + '\U000023F3'
     bot.send_message(message.chat.id, processing_message)
-    generated_instructions = QueryProcessorInterface.process_query(proposed_user_changes)
-    bot.send_message(message.chat.id, generated_instructions)
+    ResponseHandler.generate_intermediate_representation(proposed_user_changes)
+    # generated_instructions = QueryProcessorInterface.process_query(proposed_user_changes)
+    # bot.send_message(message.chat.id, generated_instructions)
+    bot.send_message(message.chat.id, "Completed")
 
 def startup_database():
     global news_articles_cluster
