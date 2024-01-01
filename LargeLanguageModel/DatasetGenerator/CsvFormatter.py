@@ -20,6 +20,6 @@ def convert_csv_to_json(csv_file_name, json_file_name):
 
 
 if __name__ == '__main__':
-    json_file_name = 'llm_data_files_updated/instructions_types.json'
-    csv_file_name = 'llm_data_files_updated/instructions_types_csv.csv'
+    json_file_name = 'DatasetFiles/instructions_types.json'
+    csv_file_name = 'DatasetFiles/instructions_types_csv.csv'
     convert_json_to_csv(json_file_name, csv_file_name)
