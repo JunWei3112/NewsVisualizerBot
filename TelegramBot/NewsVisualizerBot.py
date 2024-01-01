@@ -1,7 +1,6 @@
 import config
 import telebot
 from Databases import CommonDbOperations
-from QueryProcessor import QueryProcessorInterface
 import ResponseHandler
 
 # Initialise Telegram bot
