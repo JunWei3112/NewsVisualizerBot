@@ -119,6 +119,6 @@ def combine_two_words(word1, word2):
         word1.text = word1.text + ' ' + word2.text
         return word1
 
-ADD_SYNONYMS = ['add', 'add in', 'add on', 'adjoin', 'attach', 'append', 'include', 'inject', 'insert', 'put', 'put in']
+ADD_SYNONYMS = ['add', 'add in', 'add on', 'adjoin', 'attach', 'append', 'include', 'inject', 'insert', 'place', 'put', 'put in']
 DELETE_SYNONYMS = ['cancel', 'clean', 'cut out', 'drop', 'delete', 'destroy', 'edit out', 'erase', 'exclude', 'omit', 'remove', 'take out']
 EDIT_SYNONYMS = ['change', 'correct', 'edit', 'make', 'modify', 'replace']

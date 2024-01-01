@@ -1,8 +1,20 @@
 # Ignore IDE-related files
 .idea
+.env
 
 # Ignore files related to API keys
 config.py
 
 # Ignore compiled bytecode files
 *.pyc
+
+# Ignore bash scripts and other misc files in LargeLanguageModel
+LargeLanguageModel/*/*.sh
+LargeLanguageModel/*.txt
+LargeLanguageModel/LanguageModelLangchain.py
+
+# Ignore generated JSON and CSV-related files in DatasetGenerator
+LargeLanguageModel/DatasetGenerator/*/*.json
+LargeLanguageModel/DatasetGenerator/*/*.csv
+LargeLanguageModel/DatasetGenerator/*/*.xlsx
+LargeLanguageModel/DatasetGenerator/*/*.xlsm

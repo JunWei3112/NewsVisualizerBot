@@ -9,8 +9,8 @@ def parse_dependencies(pos_tagged_doc):
     nlp = stanza.Pipeline('en', processors='depparse', download_method=None, depparse_pretagged=True)
 
     doc = nlp(pos_tagged_doc)
-    # print_document(doc)
-    # print('----------------')
+    print_document(doc)
+    print('----------------')
     doc = combine_compound_words(doc)
     print_document(doc)
     return doc
