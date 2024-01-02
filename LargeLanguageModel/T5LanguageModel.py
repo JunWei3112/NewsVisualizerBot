@@ -3,14 +3,21 @@ import transformers
 import torch
 from linetimer import CodeTimer
 import json
+from datasets import *
 
-def read_json_file(json_file_name):
+def get_local_dataset_json(json_file_name):
     file_obj = open(json_file_name, "r")
     json_content = file_obj.read()
     return json.loads(json_content)
 
+def get_remote_dataset_json(repo_name, json_file_name):
+    dataset_dict = load_dataset(repo_name, data_files=json_file_name)
+    train_dataset = dataset_dict["train"]
+    train_data_list = list(train_dataset)
+    return json.dumps(train_data_list)
+
 def run_diagnostics(llm_generate_text):
-    annotations_json = read_json_file("annotations.json")
+    annotations_json = get_local_dataset_json("annotations.json")
     number_of_annotations = 0
     correct_annotations = 0
 
@@ -148,13 +155,17 @@ def generate_structured_output(pipeline, instruction):
             print(f'Edit Value: {edit_value}')
 
 if __name__ == '__main__':
-    model_path = 'google/flan-t5-large-instruction-type-tuned'
-    generate_text = generate_pipeline(model_path)
+    # model_path = 'google/flan-t5-large-instruction-type-tuned'
+    # generate_text = generate_pipeline(model_path)
+    #
+    # instruction = "add a comment: 'This is a good article'"
+    # print('-------------------------------------')
+    # print(f'Instruction: {instruction}')
+    # print('-------------------------------------')
+    #
+    # generate_structured_output(generate_text, instruction)
 
-    instruction = "add a comment: 'This is a good article'"
-    print('-------------------------------------')
-    print(f'Instruction: {instruction}')
-    print('-------------------------------------')
-
-    generate_structured_output(generate_text, instruction)
+    hub_dataset_repo_name = "McSpicyWithMilo/infographic-instructions"
+    hub_dataset_json_file_name = "instructions_200.json"
+    print(get_remote_dataset_json(hub_dataset_repo_name, hub_dataset_json_file_name))
 
