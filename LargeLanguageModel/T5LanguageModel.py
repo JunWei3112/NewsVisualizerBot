@@ -5,31 +5,24 @@ from linetimer import CodeTimer
 import json
 from datasets import *
 
-def get_local_dataset_json(json_file_name):
-    file_obj = open(json_file_name, "r")
-    json_content = file_obj.read()
-    return json.loads(json_content)
-
 def get_remote_dataset_json(repo_name, json_file_name):
     dataset_dict = load_dataset(repo_name, data_files=json_file_name)
     train_dataset = dataset_dict["train"]
     train_data_list = list(train_dataset)
-    return json.dumps(train_data_list)
+    return json.loads(json.dumps(train_data_list))
 
-def run_diagnostics(llm_generate_text):
-    annotations_json = get_local_dataset_json("annotations.json")
+def run_diagnostics(pipeline, hub_dataset_repo_name, hub_dataset_json_file_name):
+    annotations_json = get_remote_dataset_json(hub_dataset_repo_name, hub_dataset_json_file_name)
     number_of_annotations = 0
     correct_annotations = 0
 
     with CodeTimer('Identify Instruction Type', unit='s'):
         for annotation in annotations_json:
-            instruction = annotation["instruction"]["prompt"]
-            expected_instruction_type = annotation["annotation"]["instruction_type"]
+            instruction = annotation["instruction"]
+            expected_instruction_type = annotation["instruction_type"]
             number_of_annotations += 1
 
-            prompt_instruction_type = f'For the following instruction to modify an infographic ({instruction}), what is the instruction type (ADD/DELETE/EDIT/MOVE)?'
-            instruction_type_obj = llm_generate_text(prompt_instruction_type)
-            instruction_type = instruction_type_obj[0]['generated_text']
+            instruction_type = identify_instruction_type(pipeline, instruction)
             print(f'Instruction: {instruction}')
             print(f'Instruction Type: {instruction_type}')
             print(f'Expected Instruction Type: {expected_instruction_type}')
@@ -165,7 +158,7 @@ if __name__ == '__main__':
     #
     # generate_structured_output(generate_text, instruction)
 
+    generate_text_pipeline = generate_pipeline('google/flan-t5-large')
     hub_dataset_repo_name = "McSpicyWithMilo/infographic-instructions"
     hub_dataset_json_file_name = "instructions_200.json"
-    print(get_remote_dataset_json(hub_dataset_repo_name, hub_dataset_json_file_name))
-
+    run_diagnostics(generate_text_pipeline, hub_dataset_repo_name, hub_dataset_json_file_name)
