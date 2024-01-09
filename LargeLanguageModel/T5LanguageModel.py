@@ -11,7 +11,7 @@ def get_remote_dataset_json(repo_name, json_file_name):
     train_data_list = list(train_dataset)
     return json.loads(json.dumps(train_data_list))
 
-def run_diagnostics(pipeline, hub_dataset_repo_name, hub_dataset_json_file_name):
+def run_local_diagnostics(pipeline, hub_dataset_repo_name, hub_dataset_json_file_name):
     annotations_json = get_remote_dataset_json(hub_dataset_repo_name, hub_dataset_json_file_name)
     number_of_annotations = 0
     correct_annotations = 0
@@ -35,7 +35,7 @@ def run_diagnostics(pipeline, hub_dataset_repo_name, hub_dataset_json_file_name)
     print(f'Number of correct annotations: {correct_annotations}/{number_of_annotations}')
     print('------------------------------')
 
-def generate_pipeline(model_path):
+def generate_local_pipeline(model_path):
     device = f'cuda:{torch.cuda.current_device()}' if torch.cuda.is_available() else 'cpu'
     print(f"Using device: {device}")
 
@@ -158,7 +158,7 @@ if __name__ == '__main__':
     #
     # generate_structured_output(generate_text, instruction)
 
-    generate_text_pipeline = generate_pipeline('google/flan-t5-large')
+    generate_text_pipeline = generate_local_pipeline('google/flan-t5-large')
     hub_dataset_repo_name = "McSpicyWithMilo/infographic-instructions"
     hub_dataset_json_file_name = "instructions_200.json"
-    run_diagnostics(generate_text_pipeline, hub_dataset_repo_name, hub_dataset_json_file_name)
+    run_local_diagnostics(generate_text_pipeline, hub_dataset_repo_name, hub_dataset_json_file_name)
