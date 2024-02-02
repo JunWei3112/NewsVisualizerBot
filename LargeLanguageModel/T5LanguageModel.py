@@ -11,7 +11,7 @@ def get_remote_dataset_json(repo_name, json_file_name):
     train_data_list = list(train_dataset)
     return json.loads(json.dumps(train_data_list))
 
-def run_local_diagnostics(pipeline, hub_dataset_repo_name, hub_dataset_json_file_name):
+def run_local_diagnostics_instruction_type(pipeline, hub_dataset_repo_name, hub_dataset_json_file_name):
     annotations_json = get_remote_dataset_json(hub_dataset_repo_name, hub_dataset_json_file_name)
     number_of_annotations = 0
     correct_annotations = 0
@@ -23,15 +23,50 @@ def run_local_diagnostics(pipeline, hub_dataset_repo_name, hub_dataset_json_file
             number_of_annotations += 1
 
             instruction_type = identify_instruction_type(pipeline, instruction)
-            print(f'Instruction: {instruction}')
-            print(f'Instruction Type: {instruction_type}')
-            print(f'Expected Instruction Type: {expected_instruction_type}')
-            print('------------------------------')
+            # print(f'Instruction: {instruction}')
+            # print(f'Instruction Type: {instruction_type}')
+            # print(f'Expected Instruction Type: {expected_instruction_type}')
+            # print('------------------------------')
 
             if instruction_type == expected_instruction_type:
                 correct_annotations += 1
 
-    print('-----------STATS--------------')
+            if number_of_annotations % 10 == 0:
+                print('-----------UPDATE--------------')
+                print(f'Number of correct annotations: {correct_annotations}/{number_of_annotations}')
+                print('------------------------------')
+
+    print('-----------FULL STATS--------------')
+    print(f'Number of correct annotations: {correct_annotations}/{number_of_annotations}')
+    print('------------------------------')
+
+def run_local_diagnostics_infographic_section(pipeline, hub_dataset_repo_name, hub_dataset_json_file_name):
+    annotations_json = get_remote_dataset_json(hub_dataset_repo_name, hub_dataset_json_file_name)
+    number_of_annotations = 0
+    correct_annotations = 0
+
+    with CodeTimer('Identify Infographic Section', unit='s'):
+        for annotation in annotations_json:
+            instruction = annotation["instruction"]
+            expected_instruction_type = annotation["instruction_type"]
+            expected_infographic_section = annotation["infographic_section"]
+            number_of_annotations += 1
+
+            infographic_section = identify_infographic_section(pipeline, instruction, expected_instruction_type)
+            print(f'Instruction: {instruction}')
+            print(f'Infographic Section: {infographic_section}')
+            print(f'Expected Infographic Section: {expected_infographic_section}')
+            print('------------------------------')
+
+            if infographic_section == expected_infographic_section:
+                correct_annotations += 1
+
+            if number_of_annotations % 10 == 0:
+                print('-----------UPDATE--------------')
+                print(f'Number of correct annotations: {correct_annotations}/{number_of_annotations}')
+                print('------------------------------')
+
+    print('-----------FULL STATS--------------')
     print(f'Number of correct annotations: {correct_annotations}/{number_of_annotations}')
     print('------------------------------')
 
@@ -60,7 +95,8 @@ def generate_local_pipeline(model_path):
     return generate_text
 
 def identify_instruction_type(pipeline, instruction):
-    prompt_instruction_type = f'For the following instruction to modify an infographic ({instruction}), what is the instruction type (ADD/DELETE/EDIT/MOVE)?'
+    # prompt_instruction_type = f'For the following instruction to modify an infographic ({instruction}), what is the instruction type (ADD/DELETE/EDIT/MOVE)?'
+    prompt_instruction_type = f'Given the following instruction to modify an infographic: "{instruction}" Identify the type of operation specified in the instruction: ADD/DELETE/EDIT/MOVE.'
 
     instruction_type_obj = pipeline(prompt_instruction_type)
     instruction_type = instruction_type_obj[0]['generated_text']
@@ -68,6 +104,7 @@ def identify_instruction_type(pipeline, instruction):
 
 def identify_target_element(pipeline, instruction, instruction_type):
     prompt_target_element = f'For the following instruction to modify an infographic ({instruction}), what is the element that is to be '
+    # prompt_target_element = f'Given the instruction, ({instruction}) Output the specific content or element that is added in the infographic. Ensure that the answer does not include the target location of the added element or text.'
     if instruction_type == 'ADD':
         prompt_target_element += 'added?'
     elif instruction_type == 'DELETE':
@@ -82,15 +119,26 @@ def identify_target_element(pipeline, instruction, instruction_type):
     return target_element
 
 def identify_infographic_section(pipeline, instruction, instruction_type):
+    # if instruction_type == 'ADD':
+    #     prompt_infographic_section = f'For the following instruction to modify an infographic ({instruction}), what is the infographic section (Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles, Header) where the target element will be added to? '
+    # elif instruction_type == 'DELETE':
+    #     prompt_infographic_section = f'For the following instruction to modify an infographic ({instruction}), what is the infographic section (Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles, Header) where the target element will be deleted from? '
+    # elif instruction_type == 'EDIT':
+    #     prompt_infographic_section = f'For the following instruction to modify an infographic ({instruction}), what is the infographic section (Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles, Header) where the modified element is in? '
+    # else:
+    #     prompt_infographic_section = f'For the following instruction to modify an infographic ({instruction}), what is the infographic section (Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles, Header) where the target element is originally in?  '
+    # prompt_infographic_section += 'If unable to infer the infographic section, set the answer as NONE.'
+
+    infographic_sections = "The infographic comprises a 'Header' section featuring the title and a QR code linking to the content. The 'Number of Shares' section displays the numerical count of shares. The 'Vote on Reliability' section presents a diagram reflecting user opinions on the news article's reliability. The 'Related Facts' section lists statements related to the article, while the 'Latest Comments' section displays user-submitted comments. The 'Knowledge Graph Summaries' section showcases sentiments towards various entities mentioned in the news through a knowledge graph. Lastly, 'Similar Articles' provides a list of articles with diverse viewpoints, each accompanied by a QR code, header, and a brief summary. "
     if instruction_type == 'ADD':
-        prompt_infographic_section = f'For the following instruction to modify an infographic ({instruction}), what is the infographic section (1) Number of Shares, 2) Vote on Reliability, 3) Related Facts, 4) Latest Comments, 5) Knowledge Graph Summaries, 6) Similar Articles, 7) Header) where the target element will be added to? '
+        task = f"Based on the given description of an infographic with various sections (Header, Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles), infer the section in which the target element will be added to within the existing infographic in response to '{instruction}'. Provide one of the following answers: Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles, Header, or NONE if unable to infer the infographic section."
     elif instruction_type == 'DELETE':
-        prompt_infographic_section = f'For the following instruction to modify an infographic ({instruction}), what is the infographic section (1) Number of Shares, 2) Vote on Reliability, 3) Related Facts, 4) Latest Comments, 5) Knowledge Graph Summaries, 6) Similar Articles, 7) Header) where the target element will be deleted from? '
+        task = f"Based on the given description of an infographic with various sections (Header, Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles), infer the section in which the target element will be deleted from within the existing infographic in response to '{instruction}'. Provide one of the following answers: Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles, Header, or NONE if unable to infer the infographic section."
     elif instruction_type == 'EDIT':
-        prompt_infographic_section = f'For the following instruction to modify an infographic ({instruction}), what is the infographic section (1) Number of Shares, 2) Vote on Reliability, 3) Related Facts, 4) Latest Comments, 5) Knowledge Graph Summaries, 6) Similar Articles, 7) Header) where the modified element is in? '
+        task = f"Based on the given description of an infographic with various sections (Header, Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles), infer the section in which the target element will be edited or modified within the existing infographic in response to '{instruction}'. Provide one of the following answers: Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles, Header, or NONE if unable to infer the infographic section."
     else:
-        prompt_infographic_section = f'For the following instruction to modify an infographic ({instruction}), what is the infographic section (1) Number of Shares, 2) Vote on Reliability, 3) Related Facts, 4) Latest Comments, 5) Knowledge Graph Summaries, 6) Similar Articles, 7) Header) where the target element is originally in?  '
-    prompt_infographic_section += 'If unable to infer the infographic section, set the answer as NONE.'
+        task = f"Based on the given description of an infographic with various sections (Header, Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles), infer the section in which the target element is originally in within the existing infographic in response to '{instruction}'. Provide one of the following answers: Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles, Header, or NONE if unable to infer the infographic section."
+    prompt_infographic_section = infographic_sections + task
 
     infographic_section_obj = pipeline(prompt_infographic_section)
     infographic_section = infographic_section_obj[0]['generated_text']
@@ -158,7 +206,7 @@ if __name__ == '__main__':
     #
     # generate_structured_output(generate_text, instruction)
 
-    generate_text_pipeline = generate_local_pipeline('google/flan-t5-large')
+    generate_text_pipeline = generate_local_pipeline('google/flan-t5-large-infographic-section-400-lora')
     hub_dataset_repo_name = "McSpicyWithMilo/infographic-instructions"
-    hub_dataset_json_file_name = "instructions_200.json"
-    run_local_diagnostics(generate_text_pipeline, hub_dataset_repo_name, hub_dataset_json_file_name)
+    hub_dataset_json_file_name = "instructions_400.json"
+    run_local_diagnostics_instruction_type(generate_text_pipeline, hub_dataset_repo_name, hub_dataset_json_file_name)
