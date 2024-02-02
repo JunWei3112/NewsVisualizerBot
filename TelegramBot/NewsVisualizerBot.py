@@ -105,8 +105,9 @@ def receive_infographic_changes(message):
     proposed_user_changes = message.text
     processing_message = 'Generating instructions... ' + '\U000023F3'
     bot.send_message(message.chat.id, processing_message)
-    ResponseHandler.generate_intermediate_representation(proposed_user_changes)
-    bot.send_message(message.chat.id, "Completed")
+    instruction_type = ResponseHandler.generate_intermediate_representation(proposed_user_changes)
+    reply_message = f'Instruction Type: {instruction_type}'
+    bot.send_message(message.chat.id, reply_message)
 
 def view_infographic_stats(message):
     link_to_infographic = message.text

@@ -17,3 +17,5 @@ def generate_intermediate_representation(instruction):
         })
 
     print(output_instruction_type)
+    instruction_type = output_instruction_type[0]['generated_text']
+    return instruction_type
