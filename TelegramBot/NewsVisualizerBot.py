@@ -2,6 +2,11 @@ import config
 import telebot
 from Databases import CommonDbOperations
 import ResponseHandler
+from flask import Flask, request
+from pyngrok import ngrok
+
+# Initialize Flask app
+app = Flask(__name__)
 
 # Initialise Telegram bot
 bot = telebot.TeleBot(config.BOT_TOKEN, parse_mode=None)
@@ -11,8 +16,13 @@ database = None
 # To keep track of the infographic links that the users have entered
 latest_infographic_links = {}
 
-def startup_telegram_bot():
-    bot.polling(non_stop=True)
+# Define a route to handle incoming updates
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    json_str = request.get_data().decode('UTF-8')
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return ''
 
 @bot.message_handler(commands=['start'])
 def start_command(message):
@@ -39,7 +49,7 @@ def callback_inline(call):
             bot.register_next_step_handler(sent, receive_infographic)
         elif call.data == 'view_infographic_stats':
             reply_message = 'Please send me the link to the infographic that you wish to view the stats for.'
-            sent = bot.send_message(call.message.chat.id, reply_message)
+            sent = bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=reply_message)
             bot.register_next_step_handler(sent, view_infographic_stats)
         elif call.data == 'vote_for_reliability':
             keyboard = telebot.types.InlineKeyboardMarkup()
@@ -49,7 +59,6 @@ def callback_inline(call):
             vote_unreliable_button = telebot.types.InlineKeyboardButton(text="Unreliable",
                                                                         callback_data="vote_unreliable")
             keyboard.add(vote_unreliable_button)
-
             reply_message = "Do you view this news article as reliable or unreliable?"
             bot.send_message(call.message.chat.id, reply_message, reply_markup=keyboard)
         elif call.data == 'custom_modification':
@@ -70,6 +79,11 @@ def callback_inline(call):
             CommonDbOperations.increase_unreliable_vote_count(database, link_to_infographic)
             reply_message = "You have voted this article as unreliable!"
             bot.send_message(call.message.chat.id, reply_message)
+        elif call.data == 'add_comment':
+            reply_message = "What comment do you wish to add?"
+            sent = bot.send_message(call.message.chat.id, reply_message)
+            bot.register_next_step_handler(sent, receive_comment)
+
 
 def receive_news_article(message):
     link_to_infographic = CommonDbOperations.receive_news_article(database, message.chat.id, message.text)
@@ -88,6 +102,9 @@ def receive_infographic(message):
         reliability_vote_button = telebot.types.InlineKeyboardButton(text="Vote For Reliability Of News Article",
                                                                      callback_data="vote_for_reliability")
         keyboard.add(reliability_vote_button)
+        add_comment_button = telebot.types.InlineKeyboardButton(text="Add Comment",
+                                                                callback_data="add_comment")
+        keyboard.add(add_comment_button)
         custom_modification_button = telebot.types.InlineKeyboardButton(text="Type Out Modification",
                                                                         callback_data="custom_modification")
         keyboard.add(custom_modification_button)
@@ -125,7 +142,22 @@ def format_infographic_stats(infographic_document):
     overview = f"Share Count: {infographic_document['share_count']}\n"
     overview += f"Vote Counts for Reliable: {infographic_document['reliable_vote_count']}\n"
     overview += f"Vote Counts for Unreliable: {infographic_document['unreliable_vote_count']}\n"
+    overview += "Comments:\n"
+    comments = infographic_document['comments']
+    comment_index = 1
+    for comment in comments:
+        overview += f'{comment_index}) {comment}\n'
+        comment_index += 1
     return overview
+
+def receive_comment(message):
+    comment = message.text
+    user_infographic = latest_infographic_links.get(message.chat.id)
+    if user_infographic is None:
+        print('User has not entered an infographic link.')
+    CommonDbOperations.add_comment(database, user_infographic, comment)
+    reply_message = f"You have commented: {comment}"
+    bot.send_message(message.chat.id, reply_message)
 
 def startup_database():
     global database
@@ -133,4 +165,14 @@ def startup_database():
 
 if __name__ == '__main__':
     startup_database()
-    startup_telegram_bot()
+
+    # Set up ngrok tunnel
+    public_url = str(ngrok.connect("8000", bind_tls=True)).split('"')[1]
+    print(" * ngrok tunnel \"{}\" -> \"http://127.0.0.1:8000\"".format(public_url))
+
+    # Set the webhook for Telegram to send updates to the ngrok tunnel
+    bot.remove_webhook()
+    bot.set_webhook(url=f"{public_url}/webhook")
+
+    # Run the Flask app
+    app.run(port=8000)
