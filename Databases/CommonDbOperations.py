@@ -53,7 +53,8 @@ def create_infographic_document(link_to_infographic):
         "link_to_infographic": link_to_infographic,
         "unreliable_vote_count": 0,
         "reliable_vote_count": 0,
-        "share_count": 1
+        "share_count": 1,
+        "comments": [],
     }
     return infographic_document
 
@@ -132,3 +133,23 @@ def get_infographic_document(database, link_to_infographic):
     }
     infographic_document = infographics_collection.find_one(query)
     return infographic_document
+
+def add_comment(database, link_to_infographic, comment):
+    infographics_collection = database[config.DB_INFOGRAPHICS_COLLECTION_NAME]
+    query = {
+        "link_to_infographic": link_to_infographic
+    }
+    infographic_document = infographics_collection.find_one(query)
+    existing_comments = infographic_document['comments']
+    existing_comments.append(comment)
+    update = {
+        "$set": {
+            "comments": existing_comments
+        }
+    }
+    status = infographics_collection.update_one(query, update)
+
+    if status.modified_count == 1:
+        print("Document updated successfully!")
+    else:
+        print("Document not found or no changes made.")
