@@ -41,11 +41,11 @@ def callback_inline(call):
     if call.message:
         if call.data == 'receive_article':
             reply_message = 'What is the article?'
-            sent = bot.send_message(call.message.chat.id, reply_message)
+            sent = bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=reply_message)
             bot.register_next_step_handler(sent, receive_news_article)
         elif call.data == 'modify_infographic':
             reply_message = 'Please send me the link to the infographic that you wish to modify.'
-            sent = bot.send_message(call.message.chat.id, reply_message)
+            sent = bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=reply_message)
             bot.register_next_step_handler(sent, receive_infographic)
         elif call.data == 'view_infographic_stats':
             reply_message = 'Please send me the link to the infographic that you wish to view the stats for.'
@@ -122,9 +122,8 @@ def receive_infographic_changes(message):
     proposed_user_changes = message.text
     processing_message = 'Generating instructions... ' + '\U000023F3'
     bot.send_message(message.chat.id, processing_message)
-    instruction_type = ResponseHandler.generate_intermediate_representation(proposed_user_changes)
-    reply_message = f'Instruction Type: {instruction_type}'
-    bot.send_message(message.chat.id, reply_message)
+    intermediate_representation = ResponseHandler.generate_intermediate_representation(proposed_user_changes)
+    bot.send_message(message.chat.id, intermediate_representation)
 
 def view_infographic_stats(message):
     link_to_infographic = message.text

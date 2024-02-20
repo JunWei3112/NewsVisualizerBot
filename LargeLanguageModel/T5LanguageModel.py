@@ -103,16 +103,14 @@ def identify_instruction_type(pipeline, instruction):
     return instruction_type
 
 def identify_target_element(pipeline, instruction, instruction_type):
-    prompt_target_element = f'For the following instruction to modify an infographic ({instruction}), what is the element that is to be '
-    # prompt_target_element = f'Given the instruction, ({instruction}) Output the specific content or element that is added in the infographic. Ensure that the answer does not include the target location of the added element or text.'
     if instruction_type == 'ADD':
-        prompt_target_element += 'added?'
+        prompt_target_element = f'Given the instruction, ({instruction}) Output the specific content or element that is added to the infographic. Ensure that the answer does not include the target location of the element or text.'
     elif instruction_type == 'DELETE':
-        prompt_target_element += 'deleted?'
+        prompt_target_element = f'Given the instruction, ({instruction}) Output the specific content or element that is deleted from the infographic. Ensure that the answer does not include the target location of the element or text.'
     elif instruction_type == 'EDIT':
-        prompt_target_element += 'modified?'
+        prompt_target_element = f'Given the instruction, ({instruction}) Output the specific content or element that is modified in the infographic. Ensure that the answer does not include the target location of the element or text.'
     else:
-        prompt_target_element += 'moved?'
+        prompt_target_element = f'Given the instruction, ({instruction}) Output the specific content or element that is moved within the infographic. Ensure that the answer does not include the target location of the element or text.'
 
     target_element_obj = pipeline(prompt_target_element)
     target_element = target_element_obj[0]['generated_text']
@@ -146,7 +144,8 @@ def identify_infographic_section(pipeline, instruction, instruction_type):
 
 def identify_target_location(pipeline, instruction, instruction_type):
     if instruction_type == 'ADD':
-        prompt_target_location = f'For the following instruction to modify an infographic, ({instruction}), what is the target location of the new element in the infographic section? If unable to infer the location, set the answer as NONE.'
+        # prompt_target_location = f'For the following instruction to modify an infographic, ({instruction}), what is the target location of the new element in the infographic section? If unable to infer the location, set the answer as NONE.'
+        prompt_target_location = f'Identify the target location in the existing infographic where the new element should be placed based on the following user instruction: {instruction}'
     elif instruction_type == 'MOVE':
         prompt_target_location = f'For the following instruction to modify an infographic, ({instruction}), what is the new location of the target element?'
 
@@ -206,7 +205,8 @@ if __name__ == '__main__':
     #
     # generate_structured_output(generate_text, instruction)
 
-    generate_text_pipeline = generate_local_pipeline('google/flan-t5-large-infographic-section-400-lora')
-    hub_dataset_repo_name = "McSpicyWithMilo/infographic-instructions"
-    hub_dataset_json_file_name = "instructions_400.json"
-    run_local_diagnostics_instruction_type(generate_text_pipeline, hub_dataset_repo_name, hub_dataset_json_file_name)
+    generate_text_pipeline = generate_local_pipeline('google/flan-t5-large-target-element-400-lora-tt20')
+    # hub_dataset_repo_name = "McSpicyWithMilo/infographic-instructions"
+    # hub_dataset_json_file_name = "instructions_400.json"
+    # run_local_diagnostics_instruction_type(generate_text_pipeline, hub_dataset_repo_name, hub_dataset_json_file_name)
+    print(identify_target_element(generate_text_pipeline, "Delete the numerical text '10,000' from the title labeled 'Number of Shares'.", "DELETE"))
