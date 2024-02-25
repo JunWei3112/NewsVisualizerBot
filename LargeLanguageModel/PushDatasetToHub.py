@@ -104,8 +104,40 @@ def upload_target_location_datasets():
     test_dataset.push_to_hub("McSpicyWithMilo/target-locations-0.3split", split="test",
                              token=config.HUGGING_FACE_ACCESS_TOKEN_WRITE)
 
+def upload_target_element_datasets_new():
+    dataset = load_dataset("McSpicyWithMilo/infographic-instructions",
+                           data_files='instructions_new.json',
+                           split="train")
+    dataset = dataset.remove_columns(["infographic_section", "instruction_type"])
+    dataset = dataset.train_test_split(test_size=0.2)
+    train_dataset = dataset["train"]
+    test_dataset = dataset["test"]
+    train_dataset.push_to_hub("McSpicyWithMilo/target-elements-0.2split-new", split="train",
+                              token=config.HUGGING_FACE_ACCESS_TOKEN_WRITE)
+    test_dataset.push_to_hub("McSpicyWithMilo/target-elements-0.2split-new", split="test",
+                             token=config.HUGGING_FACE_ACCESS_TOKEN_WRITE)
+
+def upload_infographic_section_datasets_new():
+    dataset = load_dataset("McSpicyWithMilo/infographic-instructions",
+                           data_files='instructions_new.json',
+                           split="train")
+    dataset = dataset.remove_columns(["target_element", "instruction_type"])
+    stratify_column_name = 'infographic_section'
+    dataset = dataset.class_encode_column(stratify_column_name).train_test_split(test_size=0.2,
+                                                                                 stratify_by_column=stratify_column_name)
+    train_dataset = dataset["train"]
+    train_dataset = format_infographic_sections(train_dataset)
+    test_dataset = dataset["test"]
+    test_dataset = format_infographic_sections(test_dataset)
+    train_dataset.push_to_hub("McSpicyWithMilo/infographic-sections-0.2split-new", split="train",
+                              token=config.HUGGING_FACE_ACCESS_TOKEN_WRITE)
+    test_dataset.push_to_hub("McSpicyWithMilo/infographic-sections-0.2split-new", split="test",
+                             token=config.HUGGING_FACE_ACCESS_TOKEN_WRITE)
+
 if __name__ == '__main__':
     # upload_instruction_type_datasets()
     # upload_infographic_section_datasets()
     # upload_target_element_datasets()
-    upload_target_location_datasets()
+    # upload_target_location_datasets()
+    # upload_target_element_datasets_new()
+    upload_infographic_section_datasets_new()

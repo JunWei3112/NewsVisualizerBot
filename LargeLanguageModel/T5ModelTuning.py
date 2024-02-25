@@ -458,7 +458,208 @@ def evaluate_target_location(model_path):
     print(rouge_results)
     print('--------------EVALUATION RESULTS (TARGET LOCATION)------------------')
 
+def fine_tune_target_element_new(input_model_path, output_model_path):
+    input_column = 'instruction'
+    output_column = 'target_element'
+
+    with CodeTimer('Load Dataset', unit='s'):
+        dataset = load_dataset("McSpicyWithMilo/target-elements-0.2split-new")
+        train_dataset = dataset["train"]
+        test_dataset = dataset["test"]
+
+    with CodeTimer('Load Model', unit='s'):
+        model = AutoModelForSeq2SeqLM.from_pretrained(input_model_path)
+
+    with CodeTimer('Load Tokenizer', unit='s'):
+        tokenizer = AutoTokenizer.from_pretrained(input_model_path)
+
+    prefix = 'answer the question: '
+
+    def pre_processing_function(sample):
+        prompt_template = f'Given the instruction, ({{input}}) Output the specific content or element that is added to the infographic. Ensure that the answer does not include the target location of the element or text.'
+        inputs = [prefix + prompt_template.format(input=item) for item in sample[input_column]]
+        model_inputs = tokenizer(inputs, max_length=128, truncation=True)
+
+        labels = tokenizer(text_target=sample[output_column], max_length=512, truncation=True)
+        model_inputs["labels"] = labels["input_ids"]
+        return model_inputs
+
+    tokenized_train_dataset = train_dataset.map(pre_processing_function, batched=True)
+    tokenized_test_dataset = test_dataset.map(pre_processing_function, batched=True)
+
+    data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
+
+    with CodeTimer('Load Trainer', unit='s'):
+        output_dir = './results'
+        training_args = Seq2SeqTrainingArguments(
+            output_dir=output_dir,
+            auto_find_batch_size=True,
+            learning_rate=1e-3,
+            num_train_epochs=10,
+            weight_decay=0.01,
+            save_strategy="no",
+            evaluation_strategy="epoch",
+        )
+
+        print('-------------TRAINING HYPER-PARAMETERS----------------')
+        print('learning_rate = 1e-3')
+        print('num_train_epochs = 10')
+        print('weight_decay = 0.01')
+        print('-------------TRAINING HYPER-PARAMETERS----------------')
+
+        trainer = Seq2SeqTrainer(
+            model=model,
+            args=training_args,
+            train_dataset=tokenized_train_dataset,
+            eval_dataset=tokenized_test_dataset,
+            tokenizer=tokenizer,
+            data_collator=data_collator,
+        )
+
+    with CodeTimer('Training Of The Model', unit='s'):
+        trainer.train()
+
+    with CodeTimer('Evaluation Of The Model (Using Trainer)', unit='s'):
+        results = trainer.evaluate()
+        print(results)
+
+    with CodeTimer('Saving Model and Tokenizer', unit='s'):
+        trainer.model.save_pretrained(output_model_path)
+        tokenizer.save_pretrained(output_model_path)
+
+    with CodeTimer('Evaluation Of The Model (BLEU/ROUGE Metric)', unit='s'):
+        evaluate_target_element(output_model_path)
+
+def evaluate_target_element_new(model_path):
+    eval_dataset = load_dataset("McSpicyWithMilo/target-elements-0.2split-new", split="test")
+    predictions, references = [], []
+    generate_text = generate_local_pipeline(model_path)
+
+    for row in eval_dataset:
+        instruction = row["instruction"]
+        target_element = row["target_element"]
+
+        prompt = f'Given the instruction, ({instruction}) Output the specific content or element that is added to the infographic. Ensure that the answer does not include the target location of the element or text.'
+        prediction_obj = generate_text(prompt)
+        prediction = prediction_obj[0]['generated_text']
+        predictions.append(prediction)
+        references.append(target_element)
+
+    bleu_metric = evaluate.load("bleu")
+    bleu_results = bleu_metric.compute(references=references, predictions=predictions)
+    rouge_metric = evaluate.load('rouge')
+    rouge_results = rouge_metric.compute(references=references, predictions=predictions)
+    print('--------------EVALUATION RESULTS (TARGET ELEMENT)------------------')
+    print(bleu_results)
+    print(rouge_results)
+    print('--------------EVALUATION RESULTS (TARGET ELEMENT)------------------')
+
+def fine_tune_infographic_section_new(input_model_path, output_model_path):
+    input_column = 'instruction'
+    output_column = 'infographic_section'
+    infographic_sections = "The infographic comprises a 'Header' section featuring the title of the article. The 'Number of Shares' section displays the numerical count of shares of this infographic. The 'Vote on Reliability' section presents a diagram reflecting user opinions and votes on the news article's reliability. The 'Related Facts' section lists statements and relevant facts related to the article, while the 'Latest Comments' section displays user-submitted comments on this infographic. The 'Knowledge Graph Summaries' section showcases sentiments towards various entities mentioned in the news through a knowledge graph. Lastly, 'Similar Articles' provides a list of similar articles with diverse viewpoints, each accompanied by a QR code, header, and a brief summary. "
+
+    with CodeTimer('Load Dataset', unit='s'):
+        dataset = load_dataset("McSpicyWithMilo/infographic-sections-0.2split-new")
+        train_dataset = dataset["train"]
+        test_dataset = dataset["test"]
+
+    with CodeTimer('Load Model', unit='s'):
+        model = AutoModelForSeq2SeqLM.from_pretrained(input_model_path)
+
+    with CodeTimer('Load Tokenizer', unit='s'):
+        tokenizer = AutoTokenizer.from_pretrained(input_model_path)
+
+    prefix = 'answer the question: '
+
+    def pre_processing_function(sample):
+        task = f"Based on the given description of an infographic with various sections (Header, Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles), infer the section in which the target element will be next to within the existing infographic in response to '{{input}}'. Provide one of the following answers: Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles, Header, or NONE if unable to infer the infographic section."
+        prompt_template = infographic_sections + task
+
+        inputs = [prefix + prompt_template.format(input=item) for item in sample[input_column]]
+        model_inputs = tokenizer(inputs, max_length=128, truncation=True)
+
+        labels = tokenizer(text_target=sample[output_column], max_length=512, truncation=True)
+        model_inputs["labels"] = labels["input_ids"]
+        return model_inputs
+
+    tokenized_train_dataset = train_dataset.map(pre_processing_function, batched=True)
+    tokenized_test_dataset = test_dataset.map(pre_processing_function, batched=True)
+
+    data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
+
+    with CodeTimer('Load Trainer', unit='s'):
+        output_dir = './results'
+        training_args = Seq2SeqTrainingArguments(
+            output_dir=output_dir,
+            auto_find_batch_size=True,
+            learning_rate=3e-4,
+            num_train_epochs=10,
+            weight_decay=0.01,
+            save_strategy="no",
+            evaluation_strategy="epoch",
+        )
+
+        print('-------------TRAINING HYPER-PARAMETERS----------------')
+        print('learning_rate = 3e-4')
+        print('num_train_epochs = 10')
+        print('weight_decay = 0.01')
+        print('-------------TRAINING HYPER-PARAMETERS----------------')
+
+        trainer = Seq2SeqTrainer(
+            model=model,
+            args=training_args,
+            train_dataset=tokenized_train_dataset,
+            eval_dataset=tokenized_test_dataset,
+            tokenizer=tokenizer,
+            data_collator=data_collator,
+        )
+
+    with CodeTimer('Training Of The Model', unit='s'):
+        trainer.train()
+
+    with CodeTimer('Evaluation Of The Model (Using Trainer)', unit='s'):
+        results = trainer.evaluate()
+        print(results)
+
+    with CodeTimer('Saving Model and Tokenizer', unit='s'):
+        trainer.model.save_pretrained(output_model_path)
+        tokenizer.save_pretrained(output_model_path)
+
+    with CodeTimer('Evaluation Of The Model (Accuracy Metric)', unit='s'):
+        evaluate_infographic_section(output_model_path)
+
+def evaluate_infographic_section_new(model_path):
+    eval_dataset = load_dataset("McSpicyWithMilo/infographic-sections-0.2split-new", split="test")
+    predictions, references = [], []
+    generate_text = generate_local_pipeline(model_path)
+
+    for row in eval_dataset:
+        instruction = row["instruction"]
+        infographic_section = row["infographic_section"]
+
+        infographic_sections = "The infographic comprises a 'Header' section featuring the title of the article. The 'Number of Shares' section displays the numerical count of shares of this infographic. The 'Vote on Reliability' section presents a diagram reflecting user opinions and votes on the news article's reliability. The 'Related Facts' section lists statements and relevant facts related to the article, while the 'Latest Comments' section displays user-submitted comments on this infographic. The 'Knowledge Graph Summaries' section showcases sentiments towards various entities mentioned in the news through a knowledge graph. Lastly, 'Similar Articles' provides a list of similar articles with diverse viewpoints, each accompanied by a QR code, header, and a brief summary. "
+        task = f"Based on the given description of an infographic with various sections (Header, Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles), infer the section in which the target element will be next to within the existing infographic in response to '{instruction}'. Provide one of the following answers: Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles, Header, or NONE if unable to infer the infographic section."
+        prompt = infographic_sections + task
+
+        prediction_obj = generate_text(prompt)
+        prediction = prediction_obj[0]['generated_text']
+        predictions.append(prediction)
+        references.append(infographic_section)
+
+    prediction_to_int_mapping = {label: integer for integer, label in enumerate(set(predictions))}
+    predictions = list(map(lambda x: prediction_to_int_mapping[x], predictions))
+    references_to_int_mapping = {label: integer for integer, label in enumerate(set(references))}
+    references = list(map(lambda x: references_to_int_mapping[x], references))
+    accuracy_metric = evaluate.load("accuracy")
+    results = accuracy_metric.compute(references=references, predictions=predictions)
+    print('--------------EVALUATION RESULTS (INFOGRAPHIC SECTION)------------------')
+    print(results)
+    print('--------------EVALUATION RESULTS (INFOGRAPHIC SECTION)------------------')
+
 if __name__ == '__main__':
     input_model_path = 'google/flan-t5-large'
-    output_model_path = 'google/flan-t5-large-infographic-section-400-tt20'
-    fine_tune_infographic_section(input_model_path, output_model_path)
+    output_model_path = 'google/flan-t5-large-infographic-section-new-tt20'
+    # fine_tune_infographic_section(input_model_path, output_model_path)
+    # fine_tune_target_element_new(input_model_path, output_model_path)
+    fine_tune_infographic_section_new(input_model_path, output_model_path)

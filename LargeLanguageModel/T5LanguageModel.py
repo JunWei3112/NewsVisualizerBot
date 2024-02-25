@@ -194,6 +194,31 @@ def generate_structured_output(pipeline, instruction):
             edit_value = identify_edit_value(pipeline, instruction)
             print(f'Edit Value: {edit_value}')
 
+def identify_target_element_new(pipeline, instruction):
+    prompt_target_element_new = f'Given the instruction, ({instruction}) Output the specific content or element that is added to the infographic. Ensure that the answer does not include the target location of the element or text.'
+    target_element_obj = pipeline(prompt_target_element_new)
+    target_element = target_element_obj[0]['generated_text']
+    return target_element
+
+def identify_infographic_section_new(pipeline, instruction):
+    infographic_sections = "The infographic comprises a 'Header' section featuring the title of the article. The 'Number of Shares' section displays the numerical count of shares of this infographic. The 'Vote on Reliability' section presents a diagram reflecting user opinions and votes on the news article's reliability. The 'Related Facts' section lists statements and relevant facts related to the article, while the 'Latest Comments' section displays user-submitted comments on this infographic. The 'Knowledge Graph Summaries' section showcases sentiments towards various entities mentioned in the news through a knowledge graph. Lastly, 'Similar Articles' provides a list of similar articles with diverse viewpoints, each accompanied by a QR code, header, and a brief summary. "
+    task = f"Based on the given description of an infographic with various sections (Header, Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles), infer the section in which the target element will be next to within the existing infographic in response to '{instruction}'. Provide one of the following answers: Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles, Header, or NONE if unable to infer the infographic section."
+    prompt_infographic_section = infographic_sections + task
+
+    infographic_section_obj = pipeline(prompt_infographic_section)
+    infographic_section = infographic_section_obj[0]['generated_text']
+    return infographic_section
+
+def generate_structured_output_new(pipeline, instruction):
+    with CodeTimer('Generating Structured Output', unit='s'):
+        # Identify Target Element
+        target_element = identify_target_element(pipeline, instruction)
+        print(f'Target Element: {target_element}')
+
+        # Identify Infographic Section
+        infographic_section = identify_infographic_section(pipeline, instruction)
+        print(f'Infographic Section: {infographic_section}')
+
 if __name__ == '__main__':
     # model_path = 'google/flan-t5-large-instruction-type-tuned'
     # generate_text = generate_pipeline(model_path)
