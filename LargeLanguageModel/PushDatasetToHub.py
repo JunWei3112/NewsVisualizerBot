@@ -108,20 +108,20 @@ def upload_target_element_datasets_new():
     dataset = load_dataset("McSpicyWithMilo/infographic-instructions",
                            data_files='instructions_new.json',
                            split="train")
-    dataset = dataset.remove_columns(["infographic_section", "instruction_type"])
+    dataset = dataset.remove_columns(["infographic_section", "instruction_type", "target_location"])
     dataset = dataset.train_test_split(test_size=0.2)
     train_dataset = dataset["train"]
     test_dataset = dataset["test"]
-    train_dataset.push_to_hub("McSpicyWithMilo/target-elements-0.2split-new", split="train",
+    train_dataset.push_to_hub("McSpicyWithMilo/target-elements-0.2split-new-180", split="train",
                               token=config.HUGGING_FACE_ACCESS_TOKEN_WRITE)
-    test_dataset.push_to_hub("McSpicyWithMilo/target-elements-0.2split-new", split="test",
+    test_dataset.push_to_hub("McSpicyWithMilo/target-elements-0.2split-new-180", split="test",
                              token=config.HUGGING_FACE_ACCESS_TOKEN_WRITE)
 
 def upload_infographic_section_datasets_new():
     dataset = load_dataset("McSpicyWithMilo/infographic-instructions",
                            data_files='instructions_new.json',
                            split="train")
-    dataset = dataset.remove_columns(["target_element", "instruction_type"])
+    dataset = dataset.remove_columns(["target_element", "instruction_type", "target_location"])
     stratify_column_name = 'infographic_section'
     dataset = dataset.class_encode_column(stratify_column_name).train_test_split(test_size=0.2,
                                                                                  stratify_by_column=stratify_column_name)
@@ -129,9 +129,39 @@ def upload_infographic_section_datasets_new():
     train_dataset = format_infographic_sections(train_dataset)
     test_dataset = dataset["test"]
     test_dataset = format_infographic_sections(test_dataset)
-    train_dataset.push_to_hub("McSpicyWithMilo/infographic-sections-0.2split-new", split="train",
+    train_dataset.push_to_hub("McSpicyWithMilo/infographic-sections-0.2split-new-180", split="train",
                               token=config.HUGGING_FACE_ACCESS_TOKEN_WRITE)
-    test_dataset.push_to_hub("McSpicyWithMilo/infographic-sections-0.2split-new", split="test",
+    test_dataset.push_to_hub("McSpicyWithMilo/infographic-sections-0.2split-new-180", split="test",
+                             token=config.HUGGING_FACE_ACCESS_TOKEN_WRITE)
+
+def upload_target_location_datasets_new():
+    dataset = load_dataset("McSpicyWithMilo/infographic-instructions",
+                           data_files='instructions_new.json',
+                           split="train")
+    dataset = dataset.remove_columns(["target_element", "instruction_type", "infographic_section"])
+    dataset = dataset.train_test_split(test_size=0.2)
+    train_dataset = dataset["train"]
+    test_dataset = dataset["test"]
+    train_dataset.push_to_hub("McSpicyWithMilo/target-locations-0.2split-new-180", split="train",
+                              token=config.HUGGING_FACE_ACCESS_TOKEN_WRITE)
+    test_dataset.push_to_hub("McSpicyWithMilo/target-locations-0.2split-new-180", split="test",
+                             token=config.HUGGING_FACE_ACCESS_TOKEN_WRITE)
+
+def upload_target_location_infographic_section_datasets_new():
+    dataset = load_dataset("McSpicyWithMilo/infographic-instructions",
+                           data_files='instructions_new.json',
+                           split="train")
+    dataset = dataset.remove_columns(["instruction", "instruction_type", "target_element"])
+    stratify_column_name = 'infographic_section'
+    dataset = dataset.class_encode_column(stratify_column_name).train_test_split(test_size=0.2,
+                                                                                 stratify_by_column=stratify_column_name)
+    train_dataset = dataset["train"]
+    train_dataset = format_infographic_sections(train_dataset)
+    test_dataset = dataset["test"]
+    test_dataset = format_infographic_sections(test_dataset)
+    train_dataset.push_to_hub("McSpicyWithMilo/target-location-infographic-section-0.2split-new-180", split="train",
+                              token=config.HUGGING_FACE_ACCESS_TOKEN_WRITE)
+    test_dataset.push_to_hub("McSpicyWithMilo/target-location-infographic-section-0.2split-new-180", split="test",
                              token=config.HUGGING_FACE_ACCESS_TOKEN_WRITE)
 
 if __name__ == '__main__':
@@ -139,5 +169,7 @@ if __name__ == '__main__':
     # upload_infographic_section_datasets()
     # upload_target_element_datasets()
     # upload_target_location_datasets()
-    # upload_target_element_datasets_new()
+    upload_target_element_datasets_new()
     upload_infographic_section_datasets_new()
+    upload_target_location_datasets_new()
+    upload_target_location_infographic_section_datasets_new()

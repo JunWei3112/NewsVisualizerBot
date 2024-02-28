@@ -42,7 +42,7 @@ def convert_csv_to_json(csv_file_name, json_file_name):
 
 def convert_instructions_new_csv_to_json(csv_file_name, json_file_name):
     df = pd.read_excel(csv_file_name,
-                       usecols=['instruction', 'instruction_type', 'infographic_section', 'target_element'])
+                       usecols=['instruction', 'instruction_type', 'infographic_section', 'target_element', 'target_location'])
 
     def modify_infographic_section_field(row):
         if row['infographic_section'] == 1:
@@ -62,7 +62,7 @@ def convert_instructions_new_csv_to_json(csv_file_name, json_file_name):
 
     df['infographic_section'] = df.apply(modify_infographic_section_field, axis=1)
 
-    selected_columns = ['instruction', 'instruction_type', 'infographic_section', 'target_element']
+    selected_columns = ['instruction', 'instruction_type', 'infographic_section', 'target_element', 'target_location']
     json_data = df[selected_columns].to_json(orient='records')
 
     with open(json_file_name, 'w') as json_file:

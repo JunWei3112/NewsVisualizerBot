@@ -1,4 +1,4 @@
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from transformers import AutoTokenizer, AutoModelForQuestionAnswering, AutoModelForSeq2SeqLM
 import transformers
 import torch
 from linetimer import CodeTimer
@@ -93,6 +93,30 @@ def generate_local_pipeline(model_path):
         )
 
     return generate_text
+
+def generate_local_pipeline_question_answering(model_path):
+    device = f'cuda:{torch.cuda.current_device()}' if torch.cuda.is_available() else 'cpu'
+    print(f"Using device: {device}")
+
+    with CodeTimer('Model Loading', unit='s'):
+        model = AutoModelForQuestionAnswering.from_pretrained(model_path)
+        print(f'Model being used: {model_path}')
+
+    with CodeTimer('Tokenizer Loading', unit='s'):
+        tokenizer = AutoTokenizer.from_pretrained(model_path)
+        tokenizer.model_max_length = 2048
+
+    with CodeTimer('Pipeline Loading', unit='s'):
+        question_answering = transformers.pipeline(
+            task="question-answering",
+            model=model,
+            tokenizer=tokenizer,
+            torch_dtype=torch.float16,
+            device_map="auto",
+            max_new_tokens=256,
+        )
+
+    return question_answering
 
 def identify_instruction_type(pipeline, instruction):
     # prompt_instruction_type = f'For the following instruction to modify an infographic ({instruction}), what is the instruction type (ADD/DELETE/EDIT/MOVE)?'
@@ -200,14 +224,22 @@ def identify_target_element_new(pipeline, instruction):
     target_element = target_element_obj[0]['generated_text']
     return target_element
 
-def identify_infographic_section_new(pipeline, instruction):
-    infographic_sections = "The infographic comprises a 'Header' section featuring the title of the article. The 'Number of Shares' section displays the numerical count of shares of this infographic. The 'Vote on Reliability' section presents a diagram reflecting user opinions and votes on the news article's reliability. The 'Related Facts' section lists statements and relevant facts related to the article, while the 'Latest Comments' section displays user-submitted comments on this infographic. The 'Knowledge Graph Summaries' section showcases sentiments towards various entities mentioned in the news through a knowledge graph. Lastly, 'Similar Articles' provides a list of similar articles with diverse viewpoints, each accompanied by a QR code, header, and a brief summary. "
-    task = f"Based on the given description of an infographic with various sections (Header, Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles), infer the section in which the target element will be next to within the existing infographic in response to '{instruction}'. Provide one of the following answers: Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles, Header, or NONE if unable to infer the infographic section."
-    prompt_infographic_section = infographic_sections + task
+def identify_target_location_new(pipeline, instruction):
+    prompt_target_location_new = f'Identify the target location in the existing infographic where the new element will be added next to based on the following user instruction: {instruction}'
+    target_location_obj = pipeline(prompt_target_location_new)
+    target_location = target_location_obj[0]['generated_text']
+    return target_location
 
-    infographic_section_obj = pipeline(prompt_infographic_section)
-    infographic_section = infographic_section_obj[0]['generated_text']
-    return infographic_section
+def identify_infographic_section_new(pipeline, location):
+    infographic_sections = "The infographic comprises a 'Header' section featuring the title of the article. The 'Number of Shares' section displays the numerical count of shares of this infographic. The 'Vote on Reliability' section presents a diagram reflecting user opinions and votes on the news article's reliability. The 'Related Facts' section lists statements and relevant facts related to the article, while the 'Latest Comments' section displays user-submitted comments on this infographic. The 'Knowledge Graph Summaries' section showcases sentiments towards various entities mentioned in the news through a knowledge graph. Lastly, 'Similar Articles' provides a list of similar articles with diverse viewpoints, each accompanied by a QR code, header, and a brief summary. "
+    task = f'Based on the context, which infographic section (Header, Number of Shares, Vote on Reliability, Related Facts, Latest Comments, Knowledge Graph Summaries, Similar Articles) does "{location}" belong to?'
+    qa_input = {
+        'question': task,
+        'context': infographic_sections
+    }
+
+    infographic_section_obj = pipeline(qa_input)
+    return infographic_section_obj
 
 def generate_structured_output_new(pipeline, instruction):
     with CodeTimer('Generating Structured Output', unit='s'):
@@ -230,8 +262,12 @@ if __name__ == '__main__':
     #
     # generate_structured_output(generate_text, instruction)
 
-    generate_text_pipeline = generate_local_pipeline('google/flan-t5-large-target-element-400-lora-tt20')
+    # generate_text_pipeline = generate_local_pipeline('google/flan-t5-large-target-element-400-lora-tt20')
     # hub_dataset_repo_name = "McSpicyWithMilo/infographic-instructions"
     # hub_dataset_json_file_name = "instructions_400.json"
     # run_local_diagnostics_instruction_type(generate_text_pipeline, hub_dataset_repo_name, hub_dataset_json_file_name)
-    print(identify_target_element(generate_text_pipeline, "Delete the numerical text '10,000' from the title labeled 'Number of Shares'.", "DELETE"))
+    # print(identify_target_element(generate_text_pipeline, "Delete the numerical text '10,000' from the title labeled 'Number of Shares'.", "DELETE"))
+    question_answering_pipeline = generate_local_pipeline_question_answering('google/flan-t5-large')
+    location = 'section showcasing related articles'
+    print(identify_infographic_section_new(question_answering_pipeline, location))
+
